@@ -13,8 +13,9 @@ Socket programming in Python
 """
 
 import socket    # Basic TCP/IP communication on the internet
-import random    # To pick a port at random, giving us some chance to pick a port not in use
 import _thread   # Response computation runs concurrently with main program 
+import random    # To pick a port at random, giving us some chance to pick a port not in use
+
 
 
 def listen(portnum):
@@ -60,22 +61,45 @@ CAT = """
 def respond(sock):
     """
     Respond (only) to GET
-
     """
     sent = 0
     request = sock.recv(1024)  # We accept only short requests
     request = str(request, encoding='utf-8', errors='strict')
     print("\nRequest was {}\n".format(request))
-
     parts = request.split()
-    if len(parts) > 1 and parts[0] == "GET":
-        transmit("HTTP/1.0 200 OK\n\n", sock)
-        transmit(CAT, sock)
-    else:
+    
+    valid_request = True
+    if parts[0] != "GET":
+        valid_request = False
+
+    if len(parts[1]) <= 1:
+        valid_request = False
+        
+    invalid_chars = ["~", "..", "//"]    
+    for char in invalid_chars:
+        if parts[1].find(char) != -1: #if we find an invalid character
+            valid_request = False
+
+    if not valid_request:
         transmit("\nI don't handle this request: {}\n".format(request), sock)
+        transmit("INVALID",sock)
+        sock.close()
+        return
+    
+    valid_formats = ["html","css"]
+    for form in valid_formats:
+        if parts[1].endswith(form):            
+            try:
+                with open(parts[1][1:]) as f:
+                    transmit("HTTP/1.0 200 OK\n" + "Content-Type: text/{}\n".format(form) + "\n", sock)
+                    for line in f:
+                        transmit(line, sock)
+            except FileNotFoundError:
+                transmit("HTTP/1.0 404 Not Found\n\n", sock)
+                transmit("\nI don't handle this request: {}\n".format(request), sock)
 
+    
     sock.close()
-
     return
 
 def transmit(msg, sock):
