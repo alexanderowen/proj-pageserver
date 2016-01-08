@@ -1,4 +1,9 @@
 """
+CIS 399 Winter 2015 Assignment 1
+
+Author: Alexander Owen ('respond' function)
+Main Body of code: Michael Young
+
 Socket programming in Python
   as an illustration of the basic mechanisms of a web server.
 
@@ -7,9 +12,7 @@ Socket programming in Python
   error handling and many other things to keep the illustration as simple
   as possible. 
 
-  FIXME:
-  Currently this program always serves an ascii graphic of a cat.
-  Change it to serve files if they end with .html and are in the current directory
+  Services files if they end with .html or .css and are in the current directory
 """
 
 import socket    # Basic TCP/IP communication on the internet
@@ -51,16 +54,13 @@ def serve(sock, func):
         (clientsocket, address) = sock.accept()
         _thread.start_new_thread(func, (clientsocket,))
 
-
-CAT = """
-     ^ ^
-   =(   )=
-   """
-
-
 def respond(sock):
     """
-    Respond (only) to GET
+    Respond (only) to GET, with light security checking. Sends only valid .html
+    and .css requests (in the directory)
+    Args:
+       sock:  A server socket, already listening on some port.
+    Returns: nothing
     """
     sent = 0
     request = sock.recv(1024)  # We accept only short requests
@@ -82,7 +82,6 @@ def respond(sock):
 
     if not valid_request:
         transmit("\nI don't handle this request: {}\n".format(request), sock)
-        transmit("INVALID",sock)
         sock.close()
         return
     
@@ -97,7 +96,6 @@ def respond(sock):
             except FileNotFoundError:
                 transmit("HTTP/1.0 404 Not Found\n\n", sock)
                 transmit("\nI don't handle this request: {}\n".format(request), sock)
-
     
     sock.close()
     return
